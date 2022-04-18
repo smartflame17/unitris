@@ -34,6 +34,7 @@ void InitTetris(){
 
 	nextBlock[0]=rand()%7;
 	nextBlock[1]=rand()%7;
+	nextBlock[2]=rand()%7;
 	blockRotate=0;
 	blockY=-1;
 	blockX=WIDTH/2-2;
@@ -57,11 +58,12 @@ void DrawOutline(){
 	move(2,WIDTH+10);
 	printw("NEXT BLOCK");
 	DrawBox(3,WIDTH+10,4,8);
+	DrawBox(9, WIDTH+10,4,8);
 
 	/* score를 보여주는 공간의 태두리를 그린다.*/
-	move(9,WIDTH+10);
+	move(15,WIDTH+10);
 	printw("SCORE");
-	DrawBox(10,WIDTH+10,1,8);
+	DrawBox(16,WIDTH+10,1,8);
 }
 
 int GetCommand(){
@@ -137,7 +139,7 @@ void DrawField(){
 
 
 void PrintScore(int score){
-	move(11,WIDTH+11);
+	move(17,WIDTH+11);
 	printw("%8d",score);
 }
 
@@ -147,6 +149,17 @@ void DrawNextBlock(int *nextBlock){
 		move(4+i,WIDTH+13);
 		for( j = 0; j < 4; j++ ){
 			if( block[nextBlock[1]][0][i][j] == 1 ){
+				attron(A_REVERSE);
+				printw(" ");
+				attroff(A_REVERSE);
+			}
+			else printw(" ");
+		}
+	}
+	for( i = 0; i < 4; i++ ){
+		move(10+i,WIDTH+13);
+		for( j = 0; j < 4; j++ ){
+			if( block[nextBlock[2]][0][i][j] == 1 ){
 				attron(A_REVERSE);
 				printw(" ");
 				attroff(A_REVERSE);
@@ -325,10 +338,11 @@ void BlockDown(int sig){
 	}
 	else{
 		if (blockY == -1) gameOver = 1;
-		AddBlockToField(field, nextBlock[0], blockRotate, blockY, blockX);
+		score = AddBlockToField(field, nextBlock[0], blockRotate, blockY, blockX);
 		score = DeleteLine(field);
 		nextBlock[0] = nextBlock[1];
-		nextBlock[1] = rand()%7;
+		nextBlock[1] = nextBlock[2];
+		nextBlock[2] = rand()%7;
 		blockRotate = 0;
 		blockY = -1;
 		blockX = WIDTH/2-2;
@@ -338,16 +352,22 @@ void BlockDown(int sig){
 	}
 }
 
-void AddBlockToField(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX){
+int AddBlockToField(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX){
 	//Block이 추가된 영역의 필드값을 바꾼다.
 	int i,j;
+	int touched = 0;											//touching bottom or other block on field adds up score
 
 	for (i = 0; i < BLOCK_HEIGHT; i++){
 		for (j = 0; j < BLOCK_WIDTH; j++){
-			if (block[currentBlock][blockRotate][i][j])
+			if (block[currentBlock][blockRotate][i][j]){
 				field[blockY+i][blockX+j] = 1;
+				if (blockY+i == HEIGHT-1) touched++;			//if touching bottom
+				else if (field[blockY+i+1][blockX+j] == 1) touched++;	//if another block is under
+			}
 		}
 	}
+	score += touched * 10;
+	return score;
 }
 
 int DeleteLine(char f[HEIGHT][WIDTH]){
