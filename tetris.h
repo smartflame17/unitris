@@ -352,5 +352,12 @@ int recommend(RecNode *root);
  ***********************************************************/
 void recommendedPlay();
 
+/***********************************************************
+ *	For creating shadows of block in real-time.
+ *	input	: none
+ *	return	: none
+ ***********************************************************/
+void DrawBlockWithFeatures(int y, int x, int blockID, int blockRotate);
+
 
 #endif

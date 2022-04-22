@@ -44,7 +44,7 @@ void InitTetris(){
 
 	DrawOutline();
 	DrawField();
-	DrawBlock(blockY,blockX,nextBlock[0],blockRotate,' ');
+	DrawBlockWithFeatures(blockY,blockX,nextBlock[0],blockRotate);
 	DrawNextBlock(nextBlock);
 	PrintScore(score);
 }
@@ -273,7 +273,7 @@ void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRota
 	//1. 이전 블록 정보를 찾는다. ProcessCommand의 switch문을 참조할 것
 	//2. 이전 블록 정보를 지운다. DrawBlock함수 참조할 것.
 	//3. 새로운 블록 정보를 그린다. 
-	int i,j;
+	int i,j, yTemp;
 
 	switch(command){
 		case KEY_UP:
@@ -285,9 +285,20 @@ void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRota
 						printw(".");
 				}
 			}
+			yTemp = blockY;
+			while (CheckToMove(field, currentBlock, blockRotate, yTemp+1, blockX)){
+				yTemp++;
+			}
+			for(i=0;i<4;i++){
+				for(j=0;j<4;j++){
+					move(i+yTemp+1,j+blockX+1);
+					if (block[currentBlock][blockRotate][i][j])
+						printw(".");
+				}
+			}
 			move(HEIGHT,WIDTH+10);
 			blockRotate = (blockRotate+1)%4;
-			DrawBlock(blockY, blockX, currentBlock, blockRotate, ' ');
+			DrawBlockWithFeatures(blockY, blockX, currentBlock, blockRotate);
 			break;
 		case KEY_DOWN:
 			blockY--;		
@@ -296,11 +307,22 @@ void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRota
 					move(i+blockY+1,j+blockX+1);
 					if (block[currentBlock][blockRotate][i][j])
 						printw(".");
-			}
 				}
+			}
+			yTemp = blockY;
+			while (CheckToMove(field, currentBlock, blockRotate, yTemp+1, blockX)){
+				yTemp++;
+			}
+			for(i=0;i<4;i++){
+				for(j=0;j<4;j++){
+					move(i+yTemp+1,j+blockX+1);
+					if (block[currentBlock][blockRotate][i][j])
+						printw(".");
+				}
+			}
 			move(HEIGHT,WIDTH+10);
 			blockY++;
-			DrawBlock(blockY, blockX, currentBlock, blockRotate, ' ');
+			DrawBlockWithFeatures(blockY, blockX, currentBlock, blockRotate);
 			break;
 		case KEY_RIGHT:
 			blockX--;		
@@ -309,11 +331,22 @@ void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRota
 					move(i+blockY+1,j+blockX+1);
 					if (block[currentBlock][blockRotate][i][j])
 						printw(".");
-			}
 				}
+			}
+			yTemp = blockY;
+			while (CheckToMove(field, currentBlock, blockRotate, yTemp+1, blockX)){
+				yTemp++;
+			}
+			for(i=0;i<4;i++){
+				for(j=0;j<4;j++){
+					move(i+yTemp+1,j+blockX+1);
+					if (block[currentBlock][blockRotate][i][j])
+						printw(".");
+				}
+			}
 			move(HEIGHT,WIDTH+10);
 			blockX++;
-			DrawBlock(blockY, blockX, currentBlock, blockRotate, ' ');
+			DrawBlockWithFeatures(blockY, blockX, currentBlock, blockRotate);
 			break;
 		case KEY_LEFT:
 			blockX++;		
@@ -322,11 +355,22 @@ void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRota
 					move(i+blockY+1,j+blockX+1);
 					if (block[currentBlock][blockRotate][i][j])
 						printw(".");
-			}
 				}
+			}
+			yTemp = blockY;
+			while (CheckToMove(field, currentBlock, blockRotate, yTemp+1, blockX)){
+				yTemp++;
+			}
+			for(i=0;i<4;i++){
+				for(j=0;j<4;j++){
+					move(i+yTemp+1,j+blockX+1);
+					if (block[currentBlock][blockRotate][i][j])
+						printw(".");
+				}
+			}
 			move(HEIGHT,WIDTH+10);
 			blockX--;
-			DrawBlock(blockY, blockX, currentBlock, blockRotate, ' ');
+			DrawBlockWithFeatures(blockY, blockX, currentBlock, blockRotate);
 			break;
 	}
 }
@@ -400,9 +444,16 @@ int DeleteLine(char f[HEIGHT][WIDTH]){
 }
 
 ///////////////////////////////////////////////////////////////////////////
+void DrawBlockWithFeatures(int y, int x, int blockID, int blockRotate){
+	DrawShadow(y, x, blockID, blockRotate);
+	DrawBlock(y, x, blockID, blockRotate, ' ');
+}
 
 void DrawShadow(int y, int x, int blockID,int blockRotate){
-	// user code
+	while (CheckToMove(field, blockID, blockRotate, y+1, x)){
+		y++;
+	}
+	DrawBlock(y, x, blockID, blockRotate, '/');
 }
 
 void createRankList(){
