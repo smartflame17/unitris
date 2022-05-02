@@ -21,7 +21,7 @@ int main(){
 		default: break;
 		}
 	}
-
+	writeRankFile();
 	endwin();
 	system("clear");
 	return 0;
@@ -225,7 +225,7 @@ void play(){
 			printw("Good-bye!!");
 			refresh();
 			getch();
-
+			newRank(score);
 			return;
 		}
 		timed_out = 0;
@@ -467,7 +467,7 @@ void createRankList(){
 	rankNode* temp;
 	//1. 파일 열기
 	fp = fopen("rank.txt", "r");
-
+	if (fp == NULL) return;
 	// 2. 정보읽어오기
 	/* int fscanf(FILE* stream, const char* format, ...);
 	stream:데이터를 읽어올 스트림의 FILE 객체를 가리키는 파일포인터
@@ -476,6 +476,7 @@ void createRankList(){
 	return: 성공할 경우, fscanf 함수는 읽어들인 데이터의 수를 리턴, 실패하면 EOF리턴 */
 	// EOF(End Of File): 실제로 이 값은 -1을 나타냄, EOF가 나타날때까지 입력받아오는 if문
 	if (fscanf(fp, "%d", &ranklength) != EOF) {
+		if (ranklength == 0) return;
 		fscanf(fp, "%s %d", str, &score);
 		rankNode* newRank = (rankNode*)malloc(sizeof(rankNode));
 		strcpy(newRank->name, str);
@@ -493,15 +494,16 @@ void createRankList(){
 			temp = temp->next;
 		}
 	}
+	
 	// 4. 파일닫기
 	fclose(fp);
 }
-
 
 void rank(){
 	//목적: rank 메뉴를 출력하고 점수 순으로 X부터~Y까지 출력함
 	//1. 문자열 초기화
 	int X=1, Y=ranklength, ch, i, j;
+	rankNode* temp = head;
 	clear();
 
 	//2. printw()로 3개의 메뉴출력
@@ -517,10 +519,28 @@ void rank(){
 	switch (ch){
 		//4-1. 메뉴1: X, Y를 입력받고 적절한 input인지 확인 후(X<=Y), X와 Y사이의 rank 출력
 		case '1': {
+			echo();
 			printw("X : ");
-			X = wgetch(stdscr);
+			scanw("%d", &X);
 			printw("Y : ");
-			Y = wgetch(stdscr);
+			scanw("%d", &Y);
+			noecho();
+			printw("\n        name    |   score  \n");
+			printw("----------------------------\n");
+			//if (X < 0) X = 1;
+			if (Y > ranklength) Y = ranklength;
+			if (X > Y || X < 1 || X > ranklength || Y < 1) {
+				printw("\nsearch failure : no rank in the list\n");
+				break;
+			}
+			else{
+				Y = Y - X + 1;
+				for (i = 1; i < X; i++) temp = temp->next;
+				for (i = 0; i < Y; i++){
+					printw(" %-15s| %-9d\n", temp->name, temp->score);
+					temp = temp->next;
+				}
+			}
 			break;
 		}
 			
@@ -545,26 +565,25 @@ void rank(){
 }
 
 void writeRankFile(){
-	/* 목적: 추가된 랭킹 정보가 있으면 새로운 정보를 "rank.txt"에 쓰고 없으면 종료
-	int sn, i;
+	// 목적: 추가된 랭킹 정보가 있으면 새로운 정보를 "rank.txt"에 쓰고 없으면 종료
+	int i;
+	rankNode* curr = head;
+	rankNode* prev = NULL;
 	//1. "rank.txt" 연다
-	FILE *fp = fopen("rank.txt", "r");
+	if (ranklength != 0){
+		FILE *fp = fopen("rank.txt", "w");
 
-	//2. 랭킹 정보들의 수를 "rank.txt"에 기록
-
-	//3. 탐색할 노드가 더 있는지 체크하고 있으면 다음 노드로 이동, 없으면 종료
-	if ( sn == ranklength) return;
-	else {
-
-
+		//2. 랭킹 정보들의 수를 "rank.txt"에 기록
+		fprintf(fp, "%d\n",ranklength);
+		//3. 탐색할 노드가 더 있는지 체크하고 있으면 다음 노드로 이동, 없으면 종료
+		for ( i= 0; i < ranklength; i++) {
+			fprintf(fp, "%s %d\n", curr->name, curr->score);
+			prev = curr;
+			curr = curr->next;
+			free(prev);
+		}
+		fclose(fp);
 	}
-	
-	for ( i= 1; i < ranklength+1 ; i++) {
-		free(a.rank_name[i]);
-	}
-	free(a.rank_name);
-	free(a.rank_score);
-	*/
 }
 
 void newRank(int score){
@@ -600,7 +619,7 @@ void newRank(int score){
 			prev->next = newRank;
 		}
 	}
-	writeRankFile();
+	ranklength++;
 }
 
 void DrawRecommend(int y, int x, int blockID,int blockRotate){
