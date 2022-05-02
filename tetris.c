@@ -502,7 +502,7 @@ void createRankList(){
 void rank(){
 	//목적: rank 메뉴를 출력하고 점수 순으로 X부터~Y까지 출력함
 	//1. 문자열 초기화
-	int X=1, Y=ranklength, ch, i, j;
+	int X=1, Y=ranklength, ch, i;
 	rankNode* temp = head;
 	clear();
 
@@ -527,7 +527,7 @@ void rank(){
 			noecho();
 			printw("\n        name    |   score  \n");
 			printw("----------------------------\n");
-			//if (X < 0) X = 1;
+			//if (X < 0) X = 1;					just in case if standards for X changes
 			if (Y > ranklength) Y = ranklength;
 			if (X > Y || X < 1 || X > ranklength || Y < 1) {
 				printw("\nsearch failure : no rank in the list\n");
@@ -547,15 +547,52 @@ void rank(){
 		//4-2. 메뉴2: 문자열을 받아 저장된 이름과 비교하고 이름에 해당하는 리스트를 출력
 		case '2': {
 			char str[NAMELEN+1];
-			int check = 0;
+			int flag = 0;			//stays 0 if no matches found
 
+			echo();
+			printw("Input the name : ");
+			scanw("%s", str);
+			noecho();
+			printw("\n        name    |   score  \n");
+			printw("----------------------------\n");
+			for (i = 0; i < ranklength; i++){
+				if (!strcmp(str, temp->name)){
+					printw(" %-15s| %-9d\n", temp->name, temp->score);
+					flag = 1;
+				}
+				temp = temp->next;
+			}
+			if (!flag) printw("\nsearch failure : no name in the list\n");
 			break;
 		}
 			
 		//4-3. 메뉴3: rank번호를 입력받아 리스트에서 삭제
 		case '3': {
-			int num;
+			int num;			//stores rank for deletion
+			rankNode* prev = NULL;
 
+			echo();
+			printw("Input the rank : ");
+			scanw("%d", &num);
+			noecho();
+			if (num < 1 || num > ranklength) {
+				printw("\nsearch failure : rank not in the list\n");
+				break;
+			}
+			else if (num == 1){
+				head = temp->next;
+				free(temp);
+			}
+			else{
+				for (i = 1; i < num; i++){
+					prev = temp;
+					temp = temp->next;
+				}
+				prev->next = temp->next;
+				free(temp);
+			}
+			printw("\nresult : rank successfully deleted\n");
+			ranklength--;
 			break;
 		}
 		default: break;
