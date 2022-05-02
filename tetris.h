@@ -27,6 +27,7 @@
 // 사용자 이름의 길이
 #define NAMELEN 16
 
+
 typedef struct _rankNode{
 	int score;
 	char name[NAMELEN+1];
@@ -147,6 +148,7 @@ int nextBlock[BLOCK_NUM];	/* 현재 블럭의 ID와 다음 블럭의 ID들을 �
 int blockRotate,blockY,blockX;	/* 현재 블럭의 회전, 블럭의 Y 좌표, 블럭의 X 좌표*/
 int score;			/* 점수가 저장*/
 int gameOver=0;			/* 게임이 종료되면 1로 setting된다.*/
+
 int ranklength=0;	/* 랭킹 리스트의 크기를 저장*/
 rankNode *head = NULL;		/*랭킹 리스트의 시작을 가리킴*/
 int timed_out;
