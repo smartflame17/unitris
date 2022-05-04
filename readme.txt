@@ -1,0 +1,1 @@
+fixed rank deletion bug
