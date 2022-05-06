@@ -22,6 +22,7 @@
 // menu number
 #define MENU_PLAY '1'
 #define MENU_RANK '2'
+#define MENU_REC_PLAY '3'
 #define MENU_EXIT '4'
 
 // 사용자 이름의 길이
@@ -33,12 +34,23 @@ typedef struct _rankNode{
 	char name[NAMELEN+1];
 	struct _rankNode* next;
 } rankNode;
+
+// 최대 자식 노드 개수
 #define CHILDREN_MAX 36
+// 트리 최대 고려 블록 개수
+#define VISIBLE_BLOCKS 3
 
 typedef struct _RecNode{
-	int lv,score;
-	char (*f)[WIDTH];
-	struct _RecNode *c[CHILDREN_MAX];
+	int level;
+	int accscore;
+	int recField[HEIGHT][WIDTH];
+	struct _RecNode **child;
+	//block elements
+	int curBlockID;
+	int recBlockX;
+	int recBlockY;
+	int recBlockRotate;
+	struct _RecNode *parent;
 } RecNode;
 
 /* [blockShapeID][# of rotate][][]*/
@@ -143,6 +155,16 @@ const char block[NUM_OF_SHAPE][NUM_OF_ROTATE][BLOCK_HEIGHT][BLOCK_WIDTH] ={
 	}
 };
 
+/* length of all possible x location [blockID][blockRotate] */
+int XLengthInfo[7][4] = {
+	{7, 10, 7 ,10}, {8, 9, 8, 9}, {8, 9, 8, 9}, {8, 9, 8, 9}, {9, 9, 9, 9}, {8, 9, 8, 9}, {8, 9, 8 ,9}
+};
+
+/* start of all possible x location [blockID][blockRotate] */
+int XStartInfo[7][4] = {
+	{0,-1, 0,-1}, {-1,-2,-1,-2}, {-1,-2,-1,-2}, {0, 0, 0,-1}, {-1,-1,-1,-1}, {-1,-1,-1,-1}, {-1,-1,-1,-1}
+};
+
 char field[HEIGHT][WIDTH];	/* 테트리스의 메인 게임 화면 */
 int nextBlock[BLOCK_NUM];	/* 현재 블럭의 ID와 다음 블럭의 ID들을 저장; [0]: 현재 블럭; [1]: 다음 블럭 */
 int blockRotate,blockY,blockX;	/* 현재 블럭의 회전, 블럭의 Y 좌표, 블럭의 X 좌표*/
@@ -152,6 +174,7 @@ int gameOver=0;			/* 게임이 종료되면 1로 setting된다.*/
 int ranklength=0;	/* 랭킹 리스트의 크기를 저장*/
 rankNode *head = NULL;		/*랭킹 리스트의 시작을 가리킴*/
 int timed_out;
+
 int recommendR,recommendY,recommendX; // 추천 블럭 배치 정보. 차례대로 회전, Y 좌표, X 좌표
 RecNode *recRoot;
 
@@ -350,10 +373,10 @@ void newRank(int score);
 
 /***********************************************************
  *	추천 블럭 배치를 구한다.
- *	input	: (RecNode*) 추천 트리의 루트
+ *	input	: (RecNode*) 추천 트리의 루트, (level) 현재 노드의 레벨
  *	return	: (int) 추천 블럭 배치를 따를 때 얻어지는 예상 스코어
  ***********************************************************/
-int recommend(RecNode *root);
+int recommend(RecNode *root, int level);
 
 /***********************************************************
  *	추천 기능에 따라 블럭을 배치하여 진행하는 게임을 시작한다.

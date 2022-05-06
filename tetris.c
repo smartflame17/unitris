@@ -17,6 +17,7 @@ int main(){
 		switch(menu()){
 		case MENU_PLAY: play(); break; 
 		case MENU_RANK: rank(); break;
+		case MENU_REC_PLAY: break;
 		case MENU_EXIT: exit=1; break;
 		default: break;
 		}
@@ -30,10 +31,15 @@ int main(){
 void InitTetris(){
 	int i,j;
 
+	recRoot = (RecNode*)malloc(sizeof(RecNode));
+	recRoot->accscore = 0;
 	for(j=0;j<HEIGHT;j++)
-		for(i=0;i<WIDTH;i++)
+		for(i=0;i<WIDTH;i++){
 			field[j][i]=0;
-
+			recRoot->recField[j][i] = 0;
+		}
+	recRoot->level = 1;
+	recRoot->parent = NULL;
 	nextBlock[0]=rand()%7;
 	nextBlock[1]=rand()%7;
 	nextBlock[2]=rand()%7;
@@ -43,9 +49,11 @@ void InitTetris(){
 	score=0;	
 	gameOver=0;
 	timed_out=0;
+	
 
 	DrawOutline();
 	DrawField();
+	recommend(recRoot, 1);
 	DrawBlockWithFeatures(blockY,blockX,nextBlock[0],blockRotate);
 	DrawNextBlock(nextBlock);
 	PrintScore(score);
@@ -238,6 +246,7 @@ void play(){
 	printw("GameOver!!");
 	refresh();
 	getch();
+	free(recRoot);
 	newRank(score);
 }
 
@@ -372,9 +381,15 @@ void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRota
 			DrawBlockWithFeatures(blockY, blockX, currentBlock, blockRotate);
 			break;
 	}
+	//for checking y,x coordinates for debugging
+	move(20, WIDTH+11);
+	printw("Y : %3d", blockY);
+	move(21, WIDTH+11);
+	printw("X : %3d", blockX);
 }
 
 void BlockDown(int sig){
+	int y, x;
 	if (CheckToMove(field, nextBlock[0], blockRotate, blockY+1, blockX)){
 		blockY++;
 		DrawChange(field, KEY_DOWN, nextBlock[0], blockRotate, blockY, blockX);
@@ -386,6 +401,12 @@ void BlockDown(int sig){
 		nextBlock[0] = nextBlock[1];
 		nextBlock[1] = nextBlock[2];
 		nextBlock[2] = rand()%7;
+		for (y = 0; y < HEIGHT; y++)
+				for (x = 0; x < WIDTH; x++){
+					if (field[y][x] == 1) recRoot->recField[y][x] = 1;
+					else recRoot->recField[y][x] = 0;
+				}
+		recommend(recRoot, 1);
 		blockRotate = 0;
 		blockY = -1;
 		blockX = WIDTH/2-2;
@@ -443,8 +464,10 @@ int DeleteLine(char f[HEIGHT][WIDTH]){
 }
 
 void DrawBlockWithFeatures(int y, int x, int blockID, int blockRotate){
+	DrawBlock(recommendY, recommendX, blockID, recommendR, 'R');
 	DrawShadow(y, x, blockID, blockRotate);
 	DrawBlock(y, x, blockID, blockRotate, ' ');
+	
 }
 
 void DrawShadow(int y, int x, int blockID,int blockRotate){
@@ -660,11 +683,53 @@ void DrawRecommend(int y, int x, int blockID,int blockRotate){
 	// user code
 }
 
-int recommend(RecNode *root){
-	int max=0; // 미리 보이는 블럭의 추천 배치까지 고려했을 때 얻을 수 있는 최대 점수
+int recommend(RecNode *root, int level){
+	int max = 0; // 미리 보이는 블럭의 추천 배치까지 고려했을 때 얻을 수 있는 최대 점수
+	int rot, j; //double for loop counter, rot stands for rotation
+	int blockpos; // 현재 블록이 있을 수 있는 x축 위치의 개수, 루프에 사용
+	int curblockID; // 해당 호출에서 고려할 블록 ID
+	int cn = 0;			//index for child node
+	int x, y;
 
-	// user code
+	if (level-1 > VISIBLE_BLOCKS) return 0;
+	curblockID = nextBlock[level-1];
+	if (curblockID == 4) blockpos = 36;
+	else blockpos = 34;
 
+	root->child = (RecNode**)malloc(sizeof(RecNode*)*blockpos);
+	for (rot = 0; rot < 4; rot++){
+		for (j = 0; j < XLengthInfo[curblockID][rot]; j++){
+			root->child[cn] = (RecNode*)malloc(sizeof(RecNode));
+			root->child[cn]->accscore = 0;
+			root->child[cn]->parent = root;
+			root->child[cn]->level = level + 1;
+			for (y = 0; y < HEIGHT; y++)
+				for (x = 0; x < WIDTH; x++){
+					if (root->recField[y][x] == 1) root->child[cn]->recField[y][x] = 1;
+					else root->child[cn]->recField[y][x] = 0;
+				}															//Copy root field to child's field
+			root->child[cn]->curBlockID = curblockID;
+			root->child[cn]->recBlockRotate = rot;
+			root->child[cn]->recBlockX = XStartInfo[curblockID][rot]+j;
+			root->child[cn]->recBlockY = 0;
+			while (CheckToMove(root->recField,curblockID,rot,root->child[cn]->recBlockY+1,root->child[cn]->recBlockX)){
+				root->child[cn]->recBlockY++;
+			}
+			root->child[cn]->accscore += AddBlockToField(root->child[cn]->recField, curblockID, rot, root->child[cn]->recBlockY, root->child[cn]->recBlockX);
+			root->child[cn]->accscore += DeleteLine(root->child[cn]->recField);
+			root->child[cn]->accscore += recommend(root->child[cn], level+1);
+			cn++;
+		}
+	}
+	for (j = 0; j < blockpos; j++){
+		if (root->child[j]->accscore > max){
+			recommendX = root->child[j]->recBlockX;
+			recommendY = root->child[j]->recBlockY;
+			recommendR = root->child[j]->recBlockRotate;
+			max = root->child[j]->accscore;
+		}
+		free(root->child[j]);
+	}
 	return max;
 }
 
