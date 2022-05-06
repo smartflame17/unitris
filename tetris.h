@@ -43,7 +43,7 @@ typedef struct _rankNode{
 typedef struct _RecNode{
 	int level;
 	int accscore;
-	int recField[HEIGHT][WIDTH];
+	char recField[HEIGHT][WIDTH];
 	struct _RecNode **child;
 	//block elements
 	int curBlockID;
@@ -386,7 +386,7 @@ int recommend(RecNode *root, int level);
 void recommendedPlay();
 
 /***********************************************************
- *	For creating shadows of block in real-time.
+ *	For creating shadows and recommendations of block in real-time.
  *	input	: none
  *	return	: none
  ***********************************************************/

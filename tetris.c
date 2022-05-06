@@ -396,16 +396,15 @@ void BlockDown(int sig){
 	}
 	else{
 		if (blockY == -1) gameOver = 1;
-		score = AddBlockToField(field, nextBlock[0], blockRotate, blockY, blockX);
-		score = DeleteLine(field);
+		score += AddBlockToField(field, nextBlock[0], blockRotate, blockY, blockX);
+		score += DeleteLine(field);
 		nextBlock[0] = nextBlock[1];
 		nextBlock[1] = nextBlock[2];
 		nextBlock[2] = rand()%7;
-		for (y = 0; y < HEIGHT; y++)
-				for (x = 0; x < WIDTH; x++){
-					if (field[y][x] == 1) recRoot->recField[y][x] = 1;
-					else recRoot->recField[y][x] = 0;
-				}
+		for (y = 0; y < HEIGHT; y++){
+			for (x = 0; x < WIDTH; x++)
+				recRoot->recField[y][x] = field[y][x];
+		}
 		recommend(recRoot, 1);
 		blockRotate = 0;
 		blockY = -1;
@@ -420,18 +419,19 @@ int AddBlockToField(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int 
 	//Block이 추가된 영역의 필드값을 바꾼다.
 	int i,j;
 	int touched = 0;											//touching bottom or other block on field adds up score
+	int touchscore;
 
 	for (i = 0; i < BLOCK_HEIGHT; i++){
 		for (j = 0; j < BLOCK_WIDTH; j++){
 			if (block[currentBlock][blockRotate][i][j]){
-				field[blockY+i][blockX+j] = 1;
+				f[blockY+i][blockX+j] = 1;
 				if (blockY+i == HEIGHT-1) touched++;			//if touching bottom
-				else if (field[blockY+i+1][blockX+j] == 1) touched++;	//if another block is under
+				else if (f[blockY+i+1][blockX+j] == 1) touched++;	//if another block is under
 			}
 		}
 	}
-	score += touched * 10;
-	return score;
+	touchscore = touched * 10;
+	return touchscore;
 }
 
 int DeleteLine(char f[HEIGHT][WIDTH]){
@@ -440,11 +440,12 @@ int DeleteLine(char f[HEIGHT][WIDTH]){
 	int fullFlag = 0;											//1 if line is full
 	int full_lines = 0;											//# of full lines for score calculation
 	int i, j, y, x;
+	int linefullscore;
 
 	for (i = 0; i < HEIGHT; i++){
 		fullFlag = 1;
 		for (j = 0; j < WIDTH; j++){
-			if (!field[i][j]) {
+			if (!f[i][j]) {
 				fullFlag = 0;
 				break;
 			}
@@ -453,21 +454,20 @@ int DeleteLine(char f[HEIGHT][WIDTH]){
 			full_lines++;
 			for (y = i-1; y >= 0; y--){
 				for (x = 0; x < WIDTH; x++){
-					field[y+1][x] = field[y][x];
+					f[y+1][x] = f[y][x];
 				}
 			}
-			for (x = 0; x < WIDTH; x++) field[0][x] = 0;
+			for (x = 0; x < WIDTH; x++) f[0][x] = 0;
 		}
 	}
-	score += full_lines * full_lines * 100;
-	return score;
+	linefullscore = full_lines * full_lines * 100;
+	return linefullscore;
 }
 
 void DrawBlockWithFeatures(int y, int x, int blockID, int blockRotate){
 	DrawBlock(recommendY, recommendX, blockID, recommendR, 'R');
 	DrawShadow(y, x, blockID, blockRotate);
 	DrawBlock(y, x, blockID, blockRotate, ' ');
-	
 }
 
 void DrawShadow(int y, int x, int blockID,int blockRotate){
@@ -691,7 +691,7 @@ int recommend(RecNode *root, int level){
 	int cn = 0;			//index for child node
 	int x, y;
 
-	if (level-1 > VISIBLE_BLOCKS) return 0;
+	if (level-1 > VISIBLE_BLOCKS) return max;
 	curblockID = nextBlock[level-1];
 	if (curblockID == 4) blockpos = 36;
 	else blockpos = 34;
@@ -704,20 +704,19 @@ int recommend(RecNode *root, int level){
 			root->child[cn]->parent = root;
 			root->child[cn]->level = level + 1;
 			for (y = 0; y < HEIGHT; y++)
-				for (x = 0; x < WIDTH; x++){
-					if (root->recField[y][x] == 1) root->child[cn]->recField[y][x] = 1;
-					else root->child[cn]->recField[y][x] = 0;
-				}															//Copy root field to child's field
+				for (x = 0; x < WIDTH; x++)
+					root->child[cn]->recField[y][x] = root->recField[y][x];	//Copy root field to child's field
 			root->child[cn]->curBlockID = curblockID;
 			root->child[cn]->recBlockRotate = rot;
 			root->child[cn]->recBlockX = XStartInfo[curblockID][rot]+j;
 			root->child[cn]->recBlockY = 0;
-			while (CheckToMove(root->recField,curblockID,rot,root->child[cn]->recBlockY+1,root->child[cn]->recBlockX)){
+			while (CheckToMove(root->child[cn]->recField,curblockID,rot,root->child[cn]->recBlockY+1,root->child[cn]->recBlockX)){
 				root->child[cn]->recBlockY++;
 			}
 			root->child[cn]->accscore += AddBlockToField(root->child[cn]->recField, curblockID, rot, root->child[cn]->recBlockY, root->child[cn]->recBlockX);
 			root->child[cn]->accscore += DeleteLine(root->child[cn]->recField);
 			root->child[cn]->accscore += recommend(root->child[cn], level+1);
+			// Could use penalty & advantage calculation for better recommendation
 			cn++;
 		}
 	}
