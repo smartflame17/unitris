@@ -35,10 +35,16 @@ typedef struct _rankNode{
 	struct _rankNode* next;
 } rankNode;
 
-// 최대 자식 노드 개수
-#define CHILDREN_MAX 36
 // 트리 최대 고려 블록 개수
 #define VISIBLE_BLOCKS 3
+// number of tree node pruning
+#define TREE_PRUNING 5
+
+/* 
+penalties and advantages for decision making, tweak these for higher score
+*/
+// score multiplier for higher y coord
+#define YCoordMult 5
 
 typedef struct _RecNode{
 	int level;

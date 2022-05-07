@@ -1,4 +1,5 @@
 ﻿#include "tetris.h"
+#include "recommend.h"
 
 static struct sigaction act, oact;
 int B,count;
@@ -713,10 +714,14 @@ int recommend(RecNode *root, int level){
 			while (CheckToMove(root->child[cn]->recField,curblockID,rot,root->child[cn]->recBlockY+1,root->child[cn]->recBlockX)){
 				root->child[cn]->recBlockY++;
 			}
+			root->child[cn]->accscore += root->child[cn]->recBlockY * YCoordMult;
 			root->child[cn]->accscore += AddBlockToField(root->child[cn]->recField, curblockID, rot, root->child[cn]->recBlockY, root->child[cn]->recBlockX);
 			root->child[cn]->accscore += DeleteLine(root->child[cn]->recField);
 			root->child[cn]->accscore += recommend(root->child[cn], level+1);
-			// Could use penalty & advantage calculation for better recommendation
+			// Need penalty or advantage calculation for better recommendation
+			// give penalty to accscore by counting holes under block
+			// give advantage to higher y coord(stack blocks lower) --> YCoordMult
+			//prioritize line deletion with advantage (keeping blocks low is important)
 			cn++;
 		}
 	}
