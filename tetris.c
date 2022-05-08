@@ -54,7 +54,7 @@ void InitTetris(){
 
 	DrawOutline();
 	DrawField();
-	recommend(recRoot, 1);
+	recommend(recRoot, 1);						//modified_recommend(recRoot, 1);
 	DrawBlockWithFeatures(blockY,blockX,nextBlock[0],blockRotate);
 	DrawNextBlock(nextBlock);
 	PrintScore(score);
@@ -406,7 +406,7 @@ void BlockDown(int sig){
 			for (x = 0; x < WIDTH; x++)
 				recRoot->recField[y][x] = field[y][x];
 		}
-		recommend(recRoot, 1);
+		recommend(recRoot, 1);				//modified_recommend(recRoot, 1);
 		blockRotate = 0;
 		blockY = -1;
 		blockX = WIDTH/2-2;
@@ -716,7 +716,7 @@ int recommend(RecNode *root, int level){
 			}
 			root->child[cn]->accscore += root->child[cn]->recBlockY * YCoordMult;
 			root->child[cn]->accscore += AddBlockToField(root->child[cn]->recField, curblockID, rot, root->child[cn]->recBlockY, root->child[cn]->recBlockX);
-			root->child[cn]->accscore += DeleteLine(root->child[cn]->recField);
+			root->child[cn]->accscore += DeleteLine(root->child[cn]->recField) * 1.1;
 			root->child[cn]->accscore += recommend(root->child[cn], level+1);
 			// Need penalty or advantage calculation for better recommendation
 			// give penalty to accscore by counting holes under block
