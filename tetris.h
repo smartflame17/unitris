@@ -17,7 +17,7 @@
 #define NUM_OF_ROTATE	4
 #define BLOCK_HEIGHT	4
 #define BLOCK_WIDTH	4
-#define BLOCK_NUM	3
+#define BLOCK_NUM	4
 
 // menu number
 #define MENU_PLAY '1'
@@ -40,11 +40,13 @@ typedef struct _rankNode{
 // number of tree node pruning
 #define TREE_PRUNING 5
 
-/* 
-penalties and advantages for decision making, tweak these for higher score
-*/
+
+//penalties and advantages for decision making, tweak these for higher score
+
 // score multiplier for higher y coord
-#define YCoordMult 5
+#define YCoordMultiplier 5
+// score multiplier for line deleted
+#define LineDeleteMultiplier 1.1
 
 typedef struct _RecNode{
 	int level;
@@ -183,6 +185,7 @@ int timed_out;
 
 int recommendR,recommendY,recommendX; // 추천 블럭 배치 정보. 차례대로 회전, Y 좌표, X 좌표
 RecNode *recRoot;
+
 
 /***********************************************************
  *	테트리스의 모든  global 변수를 초기화 해준다.

@@ -44,6 +44,7 @@ void InitTetris(){
 	nextBlock[0]=rand()%7;
 	nextBlock[1]=rand()%7;
 	nextBlock[2]=rand()%7;
+	nextBlock[3]=rand()%7;
 	blockRotate=0;
 	blockY=-1;
 	blockX=WIDTH/2-2;
@@ -382,15 +383,19 @@ void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRota
 			DrawBlockWithFeatures(blockY, blockX, currentBlock, blockRotate);
 			break;
 	}
-	//for checking y,x coordinates for debugging
+	/*for checking y,x coordinates for debugging
 	move(20, WIDTH+11);
 	printw("Y : %3d", blockY);
 	move(21, WIDTH+11);
 	printw("X : %3d", blockX);
+	*/
 }
 
 void BlockDown(int sig){
 	int y, x;
+	time_t start, stop;
+	double duration;		//saves time taken for each recommendation
+
 	if (CheckToMove(field, nextBlock[0], blockRotate, blockY+1, blockX)){
 		blockY++;
 		DrawChange(field, KEY_DOWN, nextBlock[0], blockRotate, blockY, blockX);
@@ -401,11 +406,13 @@ void BlockDown(int sig){
 		score += DeleteLine(field);
 		nextBlock[0] = nextBlock[1];
 		nextBlock[1] = nextBlock[2];
-		nextBlock[2] = rand()%7;
+		nextBlock[2] = nextBlock[3];
+		nextBlock[3] = rand()%7;
 		for (y = 0; y < HEIGHT; y++){
 			for (x = 0; x < WIDTH; x++)
 				recRoot->recField[y][x] = field[y][x];
 		}
+		start = time(NULL);
 		recommend(recRoot, 1);				//modified_recommend(recRoot, 1);
 		blockRotate = 0;
 		blockY = -1;
@@ -413,6 +420,10 @@ void BlockDown(int sig){
 		DrawNextBlock(nextBlock);
 		PrintScore(score);
 		DrawField();
+		stop = time(NULL);
+		duration = (double)difftime(stop, start);
+		move(20, WIDTH+11);
+		printw("Time taken : %3lfs", duration);
 	}
 }
 
@@ -680,10 +691,6 @@ void newRank(int score){
 	ranklength++;
 }
 
-void DrawRecommend(int y, int x, int blockID,int blockRotate){
-	// user code
-}
-
 int recommend(RecNode *root, int level){
 	int max = 0; // 미리 보이는 블럭의 추천 배치까지 고려했을 때 얻을 수 있는 최대 점수
 	int rot, j; //double for loop counter, rot stands for rotation
@@ -692,7 +699,7 @@ int recommend(RecNode *root, int level){
 	int cn = 0;			//index for child node
 	int x, y;
 
-	if (level-1 > VISIBLE_BLOCKS) return max;
+	if (level-1 >= VISIBLE_BLOCKS) return max;
 	curblockID = nextBlock[level-1];
 	if (curblockID == 4) blockpos = 36;
 	else blockpos = 34;
@@ -714,9 +721,9 @@ int recommend(RecNode *root, int level){
 			while (CheckToMove(root->child[cn]->recField,curblockID,rot,root->child[cn]->recBlockY+1,root->child[cn]->recBlockX)){
 				root->child[cn]->recBlockY++;
 			}
-			root->child[cn]->accscore += root->child[cn]->recBlockY * YCoordMult;
+			root->child[cn]->accscore += root->child[cn]->recBlockY * YCoordMultiplier;
 			root->child[cn]->accscore += AddBlockToField(root->child[cn]->recField, curblockID, rot, root->child[cn]->recBlockY, root->child[cn]->recBlockX);
-			root->child[cn]->accscore += DeleteLine(root->child[cn]->recField) * 1.1;
+			root->child[cn]->accscore += DeleteLine(root->child[cn]->recField) * LineDeleteMultiplier;
 			root->child[cn]->accscore += recommend(root->child[cn], level+1);
 			// Need penalty or advantage calculation for better recommendation
 			// give penalty to accscore by counting holes under block
