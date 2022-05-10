@@ -8,6 +8,7 @@
 #include <ncurses.h>
 #include <signal.h>
 #include <string.h>
+#include <unistd.h>
 
 #define WIDTH	10
 #define HEIGHT	22
@@ -47,6 +48,8 @@ typedef struct _rankNode{
 #define YCoordMultiplier 5
 // score multiplier for line deleted
 #define LineDeleteMultiplier 1.1
+//penalty for creating holes underneath
+#define HolePenalty 5
 
 typedef struct _RecNode{
 	int level;
@@ -186,6 +189,9 @@ int timed_out;
 int recommendR,recommendY,recommendX; // 추천 블럭 배치 정보. 차례대로 회전, Y 좌표, X 좌표
 RecNode *recRoot;
 
+long evalsize = 0;	//사용된 메모리의 양을 byte 크기로 저장한다.
+time_t treestart, treefinish;	//tree 구조 생성에 걸린 시간을 저장한다.
+double treeduration = 0;
 
 /***********************************************************
  *	테트리스의 모든  global 변수를 초기화 해준다.
@@ -274,7 +280,7 @@ void DrawField();
  *		  (int) 블럭의 회전 횟수
  *		  (int) 블럭의 Y좌표
  *		  (int) 블럭의 X좌표
- *	return	: none
+ *	return	: touch score
  ***********************************************************/
 int AddBlockToField(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX);
 
@@ -408,5 +414,28 @@ void DrawBlockWithFeatures(int y, int x, int blockID, int blockRotate);
  ***********************************************************/
 void NewRankNode(char name[], int score);
 
+/***********************************************************
+ *	추천 블럭 배치를 구한다. (pruning 사용)
+ *	input	: (RecNode*) 추천 트리의 루트, (level) 현재 노드의 레벨
+ *	return	: (int) 추천 블럭 배치를 따를 때 얻어지는 예상 스코어
+ ***********************************************************/
+int modified_recommend(RecNode *root, int level);
 
+/***********************************************************
+ *	recommendedPlay 실행 후 총 시간, 사용 메모리, 점수를 출력한다.
+ *	input	: (duration) 걸린 시간, (score) 점수, (evalsize) 사용 byte 수, (treeduration) 트리 생성 시간
+ *	return	: none
+ ***********************************************************/
+void spaceandtime(double duration, int score, long evalsize, double treeduration);
+
+/***********************************************************
+ *	field에 더해지기 전에 호출되어 생기는 구멍의 수를 센다
+ *	input	: (char[][]) 블럭이 쌓일 필드
+ *		  (int) 현재 블럭의 모양 ID
+ *		  (int) 블럭의 회전 횟수
+ *		  (int) 블럭의 Y좌표
+ *		  (int) 블럭의 X좌표
+ *	return	: 구멍 개수
+ ***********************************************************/
+int countholes(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX);
 #endif

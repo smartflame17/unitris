@@ -1,15 +1,14 @@
+v3.4
 problems to fix
 
-1. fucking slow (optimization needed)
-2. recommendations are absurd (need penalty system)
+1. segfault occurs occasionally (when score reaches around 10000?)
+2. pruning sometimes doesn't work (when changing VISIBLE_BLOCKS or TREE_PRUNING)
 
 problem fixed
 
-1. score, field corruption --> fixing AddBlockToField and DeleteLine solved it
-2. block doesn't go all the way down --> fixing field corruption fixed it
-3. doesn't recommend properly --> field was char type, recfield was int type (fixed to char)
+1. uses lot of memory --> used tree pruning
+2. pruned recommendations aren't great --> calculate holes to lessen weird recommendations
 
 lessons learned
 
-1. don't hard code global variables into functions (use function parameters!)
-2. watch out for data types (especially int and char!)
+1. add -g option in gcc to run gdb

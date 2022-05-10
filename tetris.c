@@ -1,5 +1,4 @@
 ﻿#include "tetris.h"
-#include "recommend.h"
 
 static struct sigaction act, oact;
 int B,count;
@@ -18,7 +17,7 @@ int main(){
 		switch(menu()){
 		case MENU_PLAY: play(); break; 
 		case MENU_RANK: rank(); break;
-		case MENU_REC_PLAY: break;
+		case MENU_REC_PLAY: recommendedPlay(); break;
 		case MENU_EXIT: exit=1; break;
 		default: break;
 		}
@@ -41,21 +40,20 @@ void InitTetris(){
 		}
 	recRoot->level = 1;
 	recRoot->parent = NULL;
-	nextBlock[0]=rand()%7;
-	nextBlock[1]=rand()%7;
-	nextBlock[2]=rand()%7;
-	nextBlock[3]=rand()%7;
+	for (i = 0; i < BLOCK_NUM; i++)
+		nextBlock[i]=rand()%7;
 	blockRotate=0;
 	blockY=-1;
 	blockX=WIDTH/2-2;
 	score=0;	
 	gameOver=0;
 	timed_out=0;
-	
+	evalsize = 0;
+	treeduration = 0;
 
 	DrawOutline();
 	DrawField();
-	recommend(recRoot, 1);						//modified_recommend(recRoot, 1);
+	modified_recommend(recRoot, 1);						//modified_recommend(recRoot, 1);
 	DrawBlockWithFeatures(blockY,blockX,nextBlock[0],blockRotate);
 	DrawNextBlock(nextBlock);
 	PrintScore(score);
@@ -393,8 +391,6 @@ void DrawChange(char f[HEIGHT][WIDTH],int command,int currentBlock,int blockRota
 
 void BlockDown(int sig){
 	int y, x;
-	time_t start, stop;
-	double duration;		//saves time taken for each recommendation
 
 	if (CheckToMove(field, nextBlock[0], blockRotate, blockY+1, blockX)){
 		blockY++;
@@ -404,26 +400,20 @@ void BlockDown(int sig){
 		if (blockY == -1) gameOver = 1;
 		score += AddBlockToField(field, nextBlock[0], blockRotate, blockY, blockX);
 		score += DeleteLine(field);
-		nextBlock[0] = nextBlock[1];
-		nextBlock[1] = nextBlock[2];
-		nextBlock[2] = nextBlock[3];
-		nextBlock[3] = rand()%7;
+		for (y = 0; y < BLOCK_NUM - 1; y++)
+			nextBlock[y] = nextBlock[y+1];
+		nextBlock[BLOCK_NUM-1] = rand()%7;
 		for (y = 0; y < HEIGHT; y++){
 			for (x = 0; x < WIDTH; x++)
 				recRoot->recField[y][x] = field[y][x];
 		}
-		start = time(NULL);
-		recommend(recRoot, 1);				//modified_recommend(recRoot, 1);
+		modified_recommend(recRoot, 1);				//modified_recommend(recRoot, 1);
 		blockRotate = 0;
 		blockY = -1;
 		blockX = WIDTH/2-2;
 		DrawNextBlock(nextBlock);
 		PrintScore(score);
 		DrawField();
-		stop = time(NULL);
-		duration = (double)difftime(stop, start);
-		move(20, WIDTH+11);
-		printw("Time taken : %3lfs", duration);
 	}
 }
 
@@ -704,7 +694,9 @@ int recommend(RecNode *root, int level){
 	if (curblockID == 4) blockpos = 36;
 	else blockpos = 34;
 
+	treestart = time(NULL);
 	root->child = (RecNode**)malloc(sizeof(RecNode*)*blockpos);
+	evalsize += sizeof(RecNode*)*blockpos;
 	for (rot = 0; rot < 4; rot++){
 		for (j = 0; j < XLengthInfo[curblockID][rot]; j++){
 			root->child[cn] = (RecNode*)malloc(sizeof(RecNode));
@@ -732,6 +724,7 @@ int recommend(RecNode *root, int level){
 			cn++;
 		}
 	}
+	evalsize += sizeof(RecNode)*blockpos;
 	for (j = 0; j < blockpos; j++){
 		if (root->child[j]->accscore > max){
 			recommendX = root->child[j]->recBlockX;
@@ -741,9 +734,192 @@ int recommend(RecNode *root, int level){
 		}
 		free(root->child[j]);
 	}
+	treefinish = time(NULL);
+	treeduration += (double)difftime(treefinish, treestart);
 	return max;
 }
 
 void recommendedPlay(){
-	// user code
+	int i ,Xdiff, Ydiff, command;
+	time_t start, finish; 	//total time until quit or gameover
+	double duration;
+	clear();
+	act.sa_handler = BlockDown;
+	sigaction(SIGALRM,&act,&oact);
+	InitTetris();
+	// must move block until block matches recommendation
+	start = time(NULL);
+	do{
+		if(timed_out==0){
+			alarm(1);
+			timed_out=1;
+		}
+		
+		//rotate first
+		while(blockRotate != recommendR){
+			if (CheckToMove(field,nextBlock[0],(blockRotate+1)%4,blockY,blockX)){
+				ProcessCommand(KEY_UP);
+			}
+			else {
+				ProcessCommand(KEY_DOWN);
+			}
+		}
+		//set x coordinates
+		Xdiff = recommendX - blockX;
+		if (Xdiff > 0){
+			for (i = 0; i < Xdiff; i++){
+				ProcessCommand(KEY_RIGHT);
+			}
+		}
+		else if (Xdiff < 0){
+			for (i = Xdiff; i < 0; i++){
+				ProcessCommand(KEY_LEFT);
+			}
+		}
+		
+		//set y coordinates
+		Ydiff = recommendY - blockY;
+		if (Ydiff > 0){
+			for (i = 0; i < Ydiff; i++){
+				ProcessCommand(KEY_DOWN);
+			}
+		}
+		command = GetCommand();
+		if(ProcessCommand(command)==QUIT){
+			finish = time(NULL);
+			duration = (double)difftime(finish, start);	
+			alarm(0);
+			DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
+			move(HEIGHT/2,WIDTH/2-4);
+			printw("Good-bye!!");
+			refresh();
+			getch();
+			free(recRoot);
+			spaceandtime(duration, score, evalsize, treeduration);
+			return;
+		}
+		timed_out = 0;
+	}while(!gameOver);
+	finish = time(NULL);
+	duration = (double)difftime(finish, start);		//total time until gameover in seconds
+	alarm(0);
+	getch();
+	DrawBox(HEIGHT/2-1,WIDTH/2-5,1,10);
+	move(HEIGHT/2,WIDTH/2-4);
+	printw("GameOver!!");
+	refresh();
+	getch();
+	free(recRoot);
+	spaceandtime(duration, score, evalsize, treeduration);
+}
+
+int modified_recommend(RecNode *root, int level){
+
+	int max = 0; // 미리 보이는 블럭의 추천 배치까지 고려했을 때 얻을 수 있는 최대 점수
+	int rot, i, j; //double for loop counter, rot stands for rotation
+	int blockpos; // 현재 블록이 있을 수 있는 x축 위치의 개수, 루프에 사용
+	int curblockID; // 해당 호출에서 고려할 블록 ID
+	int cn = 0;			//index for child node
+	int x, y;
+    RecNode* NodeArray[TREE_PRUNING];   //pruning에서 살릴 노드 포인터 저장 배열
+    RecNode* temp;
+
+	if (level-1 >= VISIBLE_BLOCKS) return max;
+	curblockID = nextBlock[level-1];
+	if (curblockID == 4) blockpos = 36;
+	else blockpos = 34;
+
+	treestart = time(NULL);
+	root->child = (RecNode**)malloc(sizeof(RecNode*)*blockpos);
+	evalsize += sizeof(RecNode*)*blockpos;
+	for (rot = 0; rot < 4; rot++){
+		for (j = 0; j < XLengthInfo[curblockID][rot]; j++){
+			root->child[cn] = (RecNode*)malloc(sizeof(RecNode));
+			root->child[cn]->accscore = 0;
+			root->child[cn]->parent = root;
+			root->child[cn]->level = level + 1;
+			for (y = 0; y < HEIGHT; y++)
+				for (x = 0; x < WIDTH; x++)
+					root->child[cn]->recField[y][x] = root->recField[y][x];	//Copy root field to child's field
+			root->child[cn]->curBlockID = curblockID;
+			root->child[cn]->recBlockRotate = rot;
+			root->child[cn]->recBlockX = XStartInfo[curblockID][rot]+j;
+			root->child[cn]->recBlockY = 0;
+			while (CheckToMove(root->child[cn]->recField,curblockID,rot,root->child[cn]->recBlockY+1,root->child[cn]->recBlockX)){
+				root->child[cn]->recBlockY++;
+			}
+			root->child[cn]->accscore += root->child[cn]->recBlockY * YCoordMultiplier;
+			root->child[cn]->accscore -= countholes(root->child[cn]->recField, curblockID, rot, root->child[cn]->recBlockY, root->child[cn]->recBlockX) * HolePenalty;
+			root->child[cn]->accscore += AddBlockToField(root->child[cn]->recField, curblockID, rot, root->child[cn]->recBlockY, root->child[cn]->recBlockX);
+			root->child[cn]->accscore += DeleteLine(root->child[cn]->recField) * LineDeleteMultiplier;;
+			cn++;
+		}
+	}
+	evalsize += sizeof(RecNode)*blockpos;
+    for (j = 0; j < blockpos; j++){
+		if (root->child[j]->accscore > max){
+			temp = root->child[j];
+			max = temp->accscore;
+		}
+	}
+    NodeArray[0] = temp;                    //NodeArray[0] contains pointer to largest scoring child
+    max = NodeArray[0]->accscore;           //max is that largest score
+    for (i = 1; i < TREE_PRUNING; i++){     //iterate for # of childs we want to leave
+        max = 0;
+        for (j = 0; j < blockpos; j++){
+            if (root->child[j]->accscore > max && root->child[j]->accscore < NodeArray[i-1]->accscore){
+                temp = root->child[j];
+				max = temp->accscore;
+            }
+        }
+		NodeArray[i] = temp;
+    }
+    for (i = 0; i < TREE_PRUNING; i++)
+        NodeArray[i]->accscore += modified_recommend(NodeArray[i], level+1);
+	max = 0;
+	for (j = 0; j < TREE_PRUNING; j++){
+		if (NodeArray[j]->accscore > max){
+			recommendX = NodeArray[j]->recBlockX;
+			recommendY = NodeArray[j]->recBlockY;
+			recommendR = NodeArray[j]->recBlockRotate;
+			max = NodeArray[j]->accscore;
+		}
+	}
+	for (j = 0; j < blockpos; j++)
+		free(root->child[j]);
+	treefinish = time(NULL);
+	treeduration += (double)difftime(treefinish, treestart);
+	return max;
+}
+
+int countholes(char f[HEIGHT][WIDTH],int currentBlock,int blockRotate, int blockY, int blockX){
+	int holes = 0;
+	int i, j;
+	int holearray[BLOCK_WIDTH];
+	int ytemp = blockY;
+
+	for (i = 0; i < BLOCK_WIDTH; i++) holearray[i] = -1;
+	for (i = 0; i < BLOCK_HEIGHT; i++){
+		for (j = 0; j < BLOCK_WIDTH; j++){
+			if (block[currentBlock][blockRotate][i][j])
+				if (holearray[j] < j) holearray[j] = j+1;		//holearray's element starts where to count
+		}
+	}
+	for (i = 0; i < BLOCK_WIDTH; i++){
+		if (holearray[i] == -1) continue;
+		while (ytemp+holearray[i] < HEIGHT){
+			if (!f[ytemp+holearray[i]][blockX]) holes++;
+			ytemp++;
+		}
+	}
+	return holes;
+}
+
+void spaceandtime(double duration, int score, long evalsize, double treeduration){
+	clear();
+	printw("Time taken (t) : %lf secs\n", duration);
+	printw("score(t) : %d\n", score);
+	printw("total memory used (space(t)) : %ld bytes\n", evalsize);
+	printw("Time taken for building tree (time(t)) : %lf secs\n", treeduration);
+	getch();
 }
